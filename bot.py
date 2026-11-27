@@ -1,9 +1,20 @@
 import os
+import threading
+from flask import Flask
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Ava Assistant is running!"
+
+def run_bot():
+    bot.infinity_polling(none_stop=True)
 
 @bot.message_handler(commands=["start"])
 def start_handler(message):
@@ -31,4 +42,7 @@ def callback_handler(call):
         bot.answer_callback_query(call.id, "Profile সেকশন আসছে")
         bot.send_message(call.message.chat.id, "👤 আপনার প্রোফাইল ও ব্যালেন্স তথ্য এখানে দেখা যাবে।")
 
-bot.infinity_polling()
+if __name__ == "__main__":
+    threading.Thread(target=run_bot, daemon=True).start()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
