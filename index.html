@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AVA Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #0b0e14; color: #f3f6fb; padding-bottom: 84px; }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px; background: #121722; border-bottom: 1px solid #1f2738;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .brand { font-weight: 700; font-size: 16px; color: #58a6ff; }
+    .rate-pill {
+      font-size: 12px; background: #1b2436; color: #9ec5ff;
+      padding: 6px 10px; border-radius: 999px; border: 1px solid #2b3954;
+    }
+    .container { padding: 16px; max-width: 520px; margin: 0 auto; }
+    .card {
+      background: #131926; border: 1px solid #222c3f; border-radius: 16px;
+      padding: 16px; margin-bottom: 14px;
+    }
+    .balance-label { font-size: 13px; color: #9aa7bd; margin-bottom: 6px; }
+    .balance-val { font-size: 28px; font-weight: 800; color: #ffffff; }
+    .usd-val { font-size: 14px; color: #4ade80; margin-top: 4px; font-weight: 600; }
+    .claim-box {
+      text-align: center; padding: 20px 14px;
+      background: linear-gradient(180deg, #172033 0%, #111622 100%);
+      border: 1px solid #283652; border-radius: 16px; margin-bottom: 14px;
+    }
+    .timer { font-size: 22px; font-weight: 700; color: #fbbf24; margin: 10px 0 14px; }
+    .btn {
+      width: 100%; padding: 13px 16px; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer; background: #2563eb; color: #fff;
+    }
+    .btn:disabled { background: #283142; color: #8b96ab; cursor: not-allowed; }
+    .btn-sec { background: #1d273b; color: #dbeafe; border: 1px solid #304161; margin-top: 10px; }
+    .section-title { font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+    .task-item {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      padding: 12px; border-radius: 12px; background: #182030; border: 1px solid #243047; margin-bottom: 10px;
+    }
+    .task-title { font-size: 14px; font-weight: 600; }
+    .task-sub { font-size: 12px; color: #9aa7bd; margin-top: 2px; }
+    .small-btn {
+      padding: 8px 12px; border-radius: 10px; border: none; font-weight: 700;
+      font-size: 12px; cursor: pointer; background: #16a34a; color: #fff; white-space: nowrap;
+    }
+    .small-btn:disabled { background: #2c3648; color: #94a3b8; cursor: default; }
+    .badge-soon {
+      display: inline-block; margin-top: 8px; font-size: 12px; padding: 5px 10px;
+      border-radius: 999px; background: #2a2112; color: #fbbf24; border: 1px solid #523f1b;
+    }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: #101520;
+      border-top: 1px solid #1f283a; display: grid; grid-template-columns: repeat(5, 1fr);
+      padding: 8px 4px; z-index: 20;
+    }
+    .nav-btn {
+      background: none; border: none; color: #8b97ad; font-size: 11px; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 2px; cursor: pointer;
+    }
+    .nav-btn.active { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">AVA Assistant</div>
+    <div class="rate-pill">100 AVA = $0.01</div>
+  </div>
+
+  <div class="container">
+    <div id="tab-mine" class="tab active">
+      <div class="card">
+        <div class="balance-label">মোট AVA ব্যালেন্স</div>
+        <div class="balance-val" id="ava-balance">0 AVA</div>
+        <div class="usd-val" id="usd-value">আনুমানিক মূল্য: $0.0000</div>
+      </div>
+
+      <div class="claim-box">
+        <div style="font-size:14px; color:#cbd5e1;">প্রতি ১২ ঘণ্টায় ক্লেইম করুন</div>
+        <div style="font-size:20px; font-weight:800; color:#60a5fa; margin-top:4px;">+100 AVA Token</div>
+        <div class="timer" id="claim-timer">লোড হচ্ছে...</div>
+        <button class="btn" id="claim-btn" onclick="claimAva()" disabled>Claim 100 AVA</button>
+      </div>
+    </div>
+
+    <div id="tab-tasks" class="tab">
+      <div class="section-title">দৈনিক কাজ (Tasks)</div>
+      <div class="task-item">
+        <div>
+          <div class="task-title">AVA চ্যানেল আপডেট দেখুন</div>
+          <div class="task-sub">রিওয়ার্ড: +50 AVA</div>
+        </div>
+        <button class="small-btn" id="t1-btn" onclick="completeTask('t1', 50, 't1-btn')">Claim</button>
+      </div>
+      <div class="task-item">
+        <div>
+          <div class="task-title">মিনি অ্যাপ গাইড পড়ুন</div>
+          <div class="task-sub">রিওয়ার্ড: +50 AVA</div>
+        </div>
+        <button class="small-btn" id="t2-btn" onclick="completeTask('t2', 50, 't2-btn')">Claim</button>
+      </div>
+    </div>
+
+    <div id="tab-miners" class="tab">
+      <div class="section-title">Miners & Cycle</div>
+      <div class="card">
+        <div style="font-weight:700; font-size:15px;">Basic AVA Cycle</div>
+        <div style="font-size:13px; color:#9aa7bd; margin-top:6px;">
+          • ক্লেইম বিরতি: প্রতি ১২ ঘণ্টা<br/>
+          • প্রতি ক্লেইমে প্রাপ্তি: 100 AVA ($0.01)<br/>
+          • অতিরিক্ত বুস্ট ও লেভেল পরবর্তীতে যুক্ত হবে।
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-friends" class="tab">
+      <div class="section-title">Friends & Invite</div>
+      <div class="card">
+        <div style="font-size:14px; font-weight:700; margin-bottom:6px;">আপনার বট রেফারেল লিংক</div>
+        <div id="ref-link" style="font-size:12px; color:#93c5fd; word-break:break-all; background:#0d131f; padding:10px; border-radius:10px;">
+          https://t.me/AvaAssistBD_bot
+        </div>
+        <button class="btn btn-sec" onclick="copyRef()">লিংক কপি করুন</button>
+      </div>
+    </div>
+
+    <div id="tab-profile" class="tab">
+      <div class="section-title">Profile & Wallet</div>
+      <div class="card">
+        <div style="font-size:15px; font-weight:700;" id="tg-user">Ava User</div>
+        <div style="font-size:12px; color:#9aa7bd; margin-top:4px;" id="tg-id">ID: Guest</div>
+        <div class="usd-val" id="profile-usd" style="margin-top:10px;">মোট মূল্য: $0.0000</div>
+        <div class="badge-soon">উত্তোলন (Withdraw): Coming Soon (১ মাস পর চালু হবে)</div>
+        <div style="font-size:12px; color:#9aa7bd; margin-top:10px;">
+          উত্তোলন ব্যবস্থা এক মাস পর সক্রিয় করা হবে। আপাতত AVA ব্যালেন্স সংগ্রহ করুন।
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('mine', this)">⛏️<span>Mine</span></button>
+    <button class="nav-btn" onclick="switchTab('tasks', this)">📋<span>Tasks</span></button>
+    <button class="nav-btn" onclick="switchTab('miners', this)">⚡<span>Miners</span></button>
+    <button class="nav-btn" onclick="switchTab('friends', this)">👥<span>Friends</span></button>
+    <button class="nav-btn" onclick="switchTab('profile', this)">👤<span>Profile</span></button>
+  </div>
+
+  <script>
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg) {
+      tg.expand();
+      const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (user) {
+        document.getElementById("tg-user").textContent = [user.first_name, user.last_name].filter(Boolean).join(" ") || "Ava User";
+        document.getElementById("tg-id").textContent = "Telegram ID: " + user.id;
+        document.getElementById("ref-link").textContent = "https://t.me/AvaAssistBD_bot?start=ref_" + user.id;
+      }
+    }
+
+    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+    const CLAIM_AMOUNT = 100;
+    const RATE_PER_AVA = 0.01 / 100;
+
+    let state = JSON.parse(localStorage.getItem("ava_app_state") || "null") || {
+      ava: 0, lastClaim: 0, tasks: {}
+    };
+
+    function saveState() {
+      localStorage.setItem("ava_app_state", JSON.stringify(state));
+      renderUI();
+    }
+
+    function renderUI() {
+      document.getElementById("ava-balance").textContent = state.ava.toLocaleString() + " AVA";
+      const usd = (state.ava * RATE_PER_AVA).toFixed(4);
+      document.getElementById("usd-value").textContent = "আনুমানিক মূল্য: $" + usd;
+      document.getElementById("profile-usd").textContent = "মোট মূল্য: $" + usd;
+      ["t1", "t2"].forEach((id) => {
+        const btn = document.getElementById(id + "-btn");
+        if (state.tasks[id]) { btn.textContent = "Done"; btn.disabled = true; }
+      });
+      updateTimer();
+    }
+
+    function updateTimer() {
+      const now = Date.now();
+      const remaining = TWELVE_HOURS_MS - (now - (state.lastClaim || 0));
+      const timerEl = document.getElementById("claim-timer");
+      const btn = document.getElementById("claim-btn");
+      if (!state.lastClaim || remaining <= 0) {
+        timerEl.textContent = "এখন Claim করার সময় হয়েছে!";
+        btn.disabled = false;
+        btn.textContent = "Claim 100 AVA";
+      } else {
+        const hrs = Math.floor(remaining / (1000 * 60 * 60));
+        const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((remaining % (1000 * 60)) / 1000);
+        timerEl.textContent =
+          String(hrs).padStart(2, "0") + ":" +
+          String(mins).padStart(2, "0") + ":" +
+          String(secs).padStart(2, "0");
+        btn.disabled = true;
+        btn.textContent = "১২ ঘণ্টা পর Claim হবে";
+      }
+    }
+
+    function claimAva() {
+      const now = Date.now();
+      if (state.lastClaim && (now - state.lastClaim) < TWELVE_HOURS_MS) return;
+      state.ava += CLAIM_AMOUNT;
+      state.lastClaim = now;
+      saveState();
+    }
+
+    function completeTask(taskId, reward, btnId) {
+      if (state.tasks[taskId]) return;
+      state.tasks[taskId] = true;
+      state.ava += reward;
+      saveState();
+      const btn = document.getElementById(btnId);
+      if (btn) { btn.textContent = "Done"; btn.disabled = true; }
+    }
+
+    function copyRef() {
+      const text = document.getElementById("ref-link").textContent.trim();
+      navigator.clipboard?.writeText(text);
+      if (tg && tg.showAlert) tg.showAlert("রেফারেল লিংক কপি হয়েছে!");
+      else alert("রেফারেল লিংক কপি হয়েছে!");
+    }
+
+    function switchTab(name, el) {
+      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+      document.getElementById("tab-" + name).classList.add("active");
+      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+      el.classList.add("active");
+    }
+
+    renderUI();
+    setInterval(updateTimer, 1000);
+  </script>
+</body>
+</html>
